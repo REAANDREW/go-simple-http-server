@@ -1,4 +1,4 @@
-package go_Simple_Http_Server
+package simpleHttp
 
 import (
 	"fmt"
