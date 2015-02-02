@@ -19,10 +19,10 @@ func Test_SimpleHttpServer(t *testing.T) {
 			port   int
 			host   string
 			url    func(path string) string
-			server SimpleHttpServer
+			server *SimpleHttpServer
 		)
 
-		g.Before(func() {
+		g.BeforeEach(func() {
 			port = 5000
 			host = "127.0.0.1"
 			url = func(path string) string {
@@ -39,7 +39,7 @@ func Test_SimpleHttpServer(t *testing.T) {
 			resp, _ := http.Get(url("/"))
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 			server.Stop()
-			_, err := http.Get(url("/")
+			_, err := http.Get(url("/"))
 			assert.True(t, err != nil)
 		})
 
