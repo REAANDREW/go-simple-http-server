@@ -19,11 +19,11 @@ type SimpleHttpServerHandler struct {
 	handlers map[string]map[string]HttpHandler
 }
 
-func NewSimpleHttpServerHandler() *SimpleHttpServerHandler {
+func newSimpleHttpServerHandler() *SimpleHttpServerHandler {
 	return &SimpleHttpServerHandler{map[string]map[string]HttpHandler{}}
 }
 
-func (instance *SimpleHttpServerHandler) AddHandler(path string, method string, handler HttpHandler) {
+func (instance *SimpleHttpServerHandler) addHandler(path string, method string, handler HttpHandler) {
 	lowerPath := strings.ToLower(path)
 	lowerMethod := strings.ToLower(method)
 	if _, ok := instance.handlers[lowerPath]; !ok {
@@ -32,7 +32,7 @@ func (instance *SimpleHttpServerHandler) AddHandler(path string, method string, 
 	instance.handlers[lowerPath][lowerMethod] = handler
 }
 
-func (instance *SimpleHttpServerHandler) HandlerFor(path string, method string) (HttpHandler, error) {
+func (instance *SimpleHttpServerHandler) handlerFor(path string, method string) (HttpHandler, error) {
 	lowerPath := strings.ToLower(path)
 	lowerMethod := strings.ToLower(method)
 	if _, ok := instance.handlers[lowerPath]; !ok {
@@ -49,7 +49,7 @@ func (instance *SimpleHttpServerHandler) HandlerFor(path string, method string) 
 func (instance *SimpleHttpServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	method := r.Method
-	handler, err := instance.HandlerFor(path, method)
+	handler, err := instance.handlerFor(path, method)
 	if err != nil {
 		fmt.Errorf("error encountered %v\n", err)
 	} else {
@@ -63,7 +63,7 @@ type SimpleHttpServer struct {
 }
 
 func NewSimpleHttpServer(port int, host string) *SimpleHttpServer {
-	handler := NewSimpleHttpServerHandler()
+	handler := newSimpleHttpServerHandler()
 	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	fmt.Errorf("error encountered %v", err)
 	return &SimpleHttpServer{ln, handler}
@@ -76,19 +76,19 @@ func (instance *SimpleHttpServer) Start() {
 }
 
 func (instance *SimpleHttpServer) Get(path string, handler HttpHandler) {
-	instance.handler.AddHandler(path, "get", handler)
+	instance.handler.addHandler(path, "get", handler)
 }
 
 func (instance *SimpleHttpServer) Post(path string, handler HttpHandler) {
-	instance.handler.AddHandler(path, "post", handler)
+	instance.handler.addHandler(path, "post", handler)
 }
 
 func (instance *SimpleHttpServer) Put(path string, handler HttpHandler) {
-	instance.handler.AddHandler(path, "put", handler)
+	instance.handler.addHandler(path, "put", handler)
 }
 
 func (instance *SimpleHttpServer) Delete(path string, handler HttpHandler) {
-	instance.handler.AddHandler(path, "delete", handler)
+	instance.handler.addHandler(path, "delete", handler)
 }
 
 func (instance *SimpleHttpServer) Stop() {
