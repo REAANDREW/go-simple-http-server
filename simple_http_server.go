@@ -1,4 +1,4 @@
-package simpleHttp
+package goSimpleHttp
 
 import (
 	"errors"
