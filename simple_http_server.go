@@ -79,6 +79,10 @@ func (instance *SimpleHttpServer) Get(path string, handler HttpHandler) {
 	instance.handler.AddHandler(path, "get", handler)
 }
 
+func (instance *SimpleHttpServer) Post(path string, handler HttpHandler) {
+	instance.handler.AddHandler(path, "post", handler)
+}
+
 func (instance *SimpleHttpServer) Stop() {
 	instance.listener.Close()
 }

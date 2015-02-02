@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -31,7 +32,8 @@ func Test_SimpleHttpServer(t *testing.T) {
 				io.WriteString(w, "Hello world!")
 			})
 			server.Start()
-			resp, _ := http.Post("http://127.0.0.1:5000")
+			body := strings.NewReader("{}")
+			resp, _ := http.Post("http://127.0.0.1:5000", "application/json", body)
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 			server.Stop()
 			_, err := http.Get("http://127.0.0.1:5000")
