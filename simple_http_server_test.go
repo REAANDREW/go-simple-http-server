@@ -20,6 +20,7 @@ func Test_SimpleHttpServer(t *testing.T) {
 			host   string
 			url    func(path string) string
 			server *SimpleHttpServer
+			client *http.Client
 		)
 
 		g.BeforeEach(func() {
@@ -29,30 +30,47 @@ func Test_SimpleHttpServer(t *testing.T) {
 				return fmt.Sprintf("http://%s:%d%s", host, port, path)
 			}
 			server = NewSimpleHttpServer(port, host)
+			client = &http.Client{}
 		})
 
 		g.It("Supports GET", func() {
+			r, _ := http.NewRequest("GET", url("/"), nil)
 			server.Get("/", func(w http.ResponseWriter, r *http.Request) {
 				io.WriteString(w, "Hello world!")
 			})
 			server.Start()
-			resp, _ := http.Get(url("/"))
+			resp, _ := client.Do(r)
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 			server.Stop()
-			_, err := http.Get(url("/"))
+			_, err := client.Do(r)
 			assert.True(t, err != nil)
 		})
 
 		g.It("Supports POST", func() {
+			body := strings.NewReader("{}")
+			r, _ := http.NewRequest("POST", url("/"), body)
 			server.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				io.WriteString(w, "Hello world!")
 			})
 			server.Start()
-			body := strings.NewReader("{}")
-			resp, _ := http.Post(url("/"), "application/json", body)
+			resp, _ := client.Do(r)
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 			server.Stop()
-			_, err := http.Post(url("/"), "application/json", body)
+			_, err := client.Do(r)
+			assert.True(t, err != nil)
+		})
+
+		g.It("Supports PUT", func() {
+			body := strings.NewReader("{}")
+			r, _ := http.NewRequest("PUT", url("/"), body)
+			server.Put("/", func(w http.ResponseWriter, r *http.Request) {
+				io.WriteString(w, "Hello world!")
+			})
+			server.Start()
+			resp, _ := client.Do(r)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+			server.Stop()
+			_, err := client.Do(r)
 			assert.True(t, err != nil)
 		})
 	})
