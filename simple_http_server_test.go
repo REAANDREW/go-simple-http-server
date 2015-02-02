@@ -24,5 +24,18 @@ func Test_SimpleHttpServer(t *testing.T) {
 			_, err := http.Get("http://127.0.0.1:5000")
 			assert.True(t, err != nil)
 		})
+
+		g.It("Supports POST", func() {
+			server := NewSimpleHttpServer(5000, "127.0.0.1")
+			server.Post("/", func(w http.ResponseWriter, r *http.Request) {
+				io.WriteString(w, "Hello world!")
+			})
+			server.Start()
+			resp, _ := http.Post("http://127.0.0.1:5000")
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+			server.Stop()
+			_, err := http.Get("http://127.0.0.1:5000")
+			assert.True(t, err != nil)
+		})
 	})
 }
