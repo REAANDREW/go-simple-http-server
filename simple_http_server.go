@@ -87,6 +87,10 @@ func (instance *SimpleHttpServer) Put(path string, handler HttpHandler) {
 	instance.handler.AddHandler(path, "put", handler)
 }
 
+func (instance *SimpleHttpServer) Delete(path string, handler HttpHandler) {
+	instance.handler.AddHandler(path, "delete", handler)
+}
+
 func (instance *SimpleHttpServer) Stop() {
 	instance.listener.Close()
 }

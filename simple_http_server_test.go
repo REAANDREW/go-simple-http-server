@@ -73,5 +73,19 @@ func Test_SimpleHttpServer(t *testing.T) {
 			_, err := client.Do(r)
 			assert.True(t, err != nil)
 		})
+
+		g.It("Supports DELETE", func() {
+			body := strings.NewReader("{}")
+			r, _ := http.NewRequest("DELETE", url("/"), body)
+			server.Delete("/", func(w http.ResponseWriter, r *http.Request) {
+				io.WriteString(w, "Hello world!")
+			})
+			server.Start()
+			resp, _ := client.Do(r)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+			server.Stop()
+			_, err := client.Do(r)
+			assert.True(t, err != nil)
+		})
 	})
 }
