@@ -52,6 +52,7 @@ func (instance *SimpleHttpServerHandler) ServeHTTP(w http.ResponseWriter, r *htt
 	handler, err := instance.handlerFor(path, method)
 	if err != nil {
 		fmt.Errorf("error encountered %v\n", err)
+		w.WriteHeader(http.StatusNotFound)
 	} else {
 		handler(w, r)
 	}
