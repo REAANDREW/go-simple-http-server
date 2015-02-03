@@ -1,18 +1,25 @@
 package goSimpleHttp
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"strings"
 )
 
+type SimpleHttpError struct {
+	code int
+}
+
+func (instance SimpleHttpError) Error() string {
+	return fmt.Sprintf("Code : %d", instance.code)
+}
+
 type HttpHandler func(w http.ResponseWriter, r *http.Request)
 
 const (
-	SimpleHttpServerHandler_NoHandler          int = 1
-	SimpleHttpServerHandler_MethodNotSupported int = 2
+	SimpleHttpServerHandler_NoHandler          int = 405
+	SimpleHttpServerHandler_MethodNotSupported int = 404
 )
 
 type SimpleHttpServerHandler struct {
@@ -36,11 +43,13 @@ func (instance *SimpleHttpServerHandler) handlerFor(path string, method string) 
 	lowerPath := strings.ToLower(path)
 	lowerMethod := strings.ToLower(method)
 	if _, ok := instance.handlers[lowerPath]; !ok {
-		return nil, errors.New("no handler for path")
+		fmt.Println("Cannot find the path", instance.handlers)
+		return nil, SimpleHttpError{http.StatusNotFound}
 	}
 	handler, ok := instance.handlers[lowerPath][lowerMethod]
 	if !ok {
-		return nil, errors.New("no handler for method")
+		fmt.Println("Cannot find the method for the path")
+		return nil, SimpleHttpError{http.StatusMethodNotAllowed}
 	}
 	return handler, nil
 
@@ -51,8 +60,9 @@ func (instance *SimpleHttpServerHandler) ServeHTTP(w http.ResponseWriter, r *htt
 	method := r.Method
 	handler, err := instance.handlerFor(path, method)
 	if err != nil {
+		httpError := err.(SimpleHttpError)
 		fmt.Errorf("error encountered %v\n", err)
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(httpError.code)
 	} else {
 		handler(w, r)
 	}

@@ -96,7 +96,16 @@ func Test_SimpleHttpServer(t *testing.T) {
 			server.Stop()
 		})
 
-		g.It("Returns Method Not Implemented when handler for path not configured")
+		g.It("Returns Method Not Implemented when handler for path not configured", func() {
+			r, _ := http.NewRequest("GET", url("/"), nil)
+			server.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				io.WriteString(w, "Hello world!")
+			})
+			server.Start()
+			resp, _ := client.Do(r)
+			assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+			server.Stop()
+		})
 
 	})
 }
