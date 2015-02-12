@@ -1,10 +1,17 @@
 package goSimpleHttp
 
 import (
+	"errors"
 	"fmt"
+	"github.com/REAANDREW/gopubsubio"
 	"net"
 	"net/http"
 	"strings"
+	"time"
+)
+
+const (
+	STOPPED_EVENT_KEY string = "stopped"
 )
 
 type SimpleHttpError struct {
@@ -69,21 +76,42 @@ func (instance *SimpleHttpServerHandler) ServeHTTP(w http.ResponseWriter, r *htt
 }
 
 type SimpleHttpServer struct {
-	listener net.Listener
-	handler  *SimpleHttpServerHandler
+	listener  net.Listener
+	handler   *SimpleHttpServerHandler
+	publisher gopubsubio.Publisher
 }
 
 func NewSimpleHttpServer(port int, host string) *SimpleHttpServer {
 	handler := newSimpleHttpServerHandler()
 	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
-	fmt.Errorf("error encountered %v", err)
-	return &SimpleHttpServer{ln, handler}
+	if err != nil {
+		panic(errors.New("A listener cannot be setup"))
+	} else {
+		return &SimpleHttpServer{ln, handler, gopubsubio.NewPublisher()}
+	}
 }
 
 func (instance *SimpleHttpServer) Start() {
+	fmt.Println("starting the http server")
 	go func() {
-		http.Serve(instance.listener, instance.handler)
+		err := http.Serve(instance.listener, instance.handler)
+		if err != nil {
+			fmt.Errorf("Error encountered here starting the http server: %v")
+		} else {
+			fmt.Println("All good with the http server")
+		}
 	}()
+}
+
+func (instance *SimpleHttpServer) publishOnStopped() {
+	instance.publisher.Publish(STOPPED_EVENT_KEY, nil)
+}
+
+func (instance *SimpleHttpServer) OnStopped(delegate func()) {
+	subscriber := gopubsubio.NewSubscriber(func(message interface{}) {
+		delegate()
+	})
+	instance.publisher.Subscribe(STOPPED_EVENT_KEY, subscriber)
 }
 
 func (instance *SimpleHttpServer) Get(path string, handler HttpHandler) {
@@ -104,4 +132,6 @@ func (instance *SimpleHttpServer) Delete(path string, handler HttpHandler) {
 
 func (instance *SimpleHttpServer) Stop() {
 	instance.listener.Close()
+	time.Sleep(10)
+	instance.publishOnStopped()
 }
