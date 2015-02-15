@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"time"
 )
 
 const (
@@ -92,13 +91,10 @@ func NewSimpleHttpServer(port int, host string) *SimpleHttpServer {
 }
 
 func (instance *SimpleHttpServer) Start() {
-	fmt.Println("starting the http server")
 	go func() {
 		err := http.Serve(instance.listener, instance.handler)
 		if err != nil {
 			fmt.Errorf("Error encountered here starting the http server: %v")
-		} else {
-			fmt.Println("All good with the http server")
 		}
 	}()
 }
@@ -132,6 +128,5 @@ func (instance *SimpleHttpServer) Delete(path string, handler HttpHandler) {
 
 func (instance *SimpleHttpServer) Stop() {
 	instance.listener.Close()
-	time.Sleep(10)
 	instance.publishOnStopped()
 }
