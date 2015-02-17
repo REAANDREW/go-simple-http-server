@@ -24,7 +24,7 @@ func Test_SimpleHttpServer(t *testing.T) {
 		)
 
 		g.BeforeEach(func() {
-			port = 5000
+			port = 6000
 			host = "127.0.0.1"
 			url = func(path string) string {
 				return fmt.Sprintf("http://%s:%d%s", host, port, path)

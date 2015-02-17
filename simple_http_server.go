@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 )
 
 const (
@@ -29,35 +30,30 @@ const (
 )
 
 type SimpleHttpServerHandler struct {
-	handlers map[string]map[string]HttpHandler
+	handlers map[string]HttpHandler
 }
 
 func newSimpleHttpServerHandler() *SimpleHttpServerHandler {
-	return &SimpleHttpServerHandler{map[string]map[string]HttpHandler{}}
+	return &SimpleHttpServerHandler{map[string]HttpHandler{}}
 }
 
 func (instance *SimpleHttpServerHandler) addHandler(path string, method string, handler HttpHandler) {
 	lowerPath := strings.ToLower(path)
 	lowerMethod := strings.ToLower(method)
-	if _, ok := instance.handlers[lowerPath]; !ok {
-		instance.handlers[lowerPath] = map[string]HttpHandler{}
-	}
-	instance.handlers[lowerPath][lowerMethod] = handler
+	key := lowerPath + "_" + lowerMethod
+	instance.handlers[key] = handler
 }
 
 func (instance *SimpleHttpServerHandler) handlerFor(path string, method string) (HttpHandler, error) {
 	lowerPath := strings.ToLower(path)
 	lowerMethod := strings.ToLower(method)
-	if _, ok := instance.handlers[lowerPath]; !ok {
-		fmt.Println("Cannot find the path", instance.handlers)
+	key := lowerPath + "_" + lowerMethod
+	if handler, ok := instance.handlers[key]; !ok {
+		fmt.Println("Cannot find a handler for the path", instance.handlers)
 		return nil, SimpleHttpError{http.StatusNotFound}
+	} else {
+		return handler, nil
 	}
-	handler, ok := instance.handlers[lowerPath][lowerMethod]
-	if !ok {
-		fmt.Println("Cannot find the method for the path")
-		return nil, SimpleHttpError{http.StatusMethodNotAllowed}
-	}
-	return handler, nil
 
 }
 
@@ -78,21 +74,32 @@ type SimpleHttpServer struct {
 	listener  net.Listener
 	handler   *SimpleHttpServerHandler
 	publisher gopubsubio.Publisher
+	mux       *http.ServeMux
+	server    *http.Server
 }
 
 func NewSimpleHttpServer(port int, host string) *SimpleHttpServer {
-	handler := newSimpleHttpServerHandler()
 	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
+		fmt.Printf("error %v\n", err)
 		panic(errors.New("A listener cannot be setup"))
-	} else {
-		return &SimpleHttpServer{ln, handler, gopubsubio.NewPublisher()}
 	}
+	handler := newSimpleHttpServerHandler()
+	mux := http.NewServeMux()
+	mux.Handle("/", handler)
+	server := &http.Server{
+		Addr:           fmt.Sprintf("%s:%d", host, port),
+		Handler:        mux,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+	return &SimpleHttpServer{ln, handler, gopubsubio.NewPublisher(), mux, server}
 }
 
 func (instance *SimpleHttpServer) Start() {
 	go func() {
-		err := http.Serve(instance.listener, instance.handler)
+		err := instance.server.Serve(instance.listener)
 		if err != nil {
 			fmt.Errorf("Error encountered here starting the http server: %v")
 		}
