@@ -25,16 +25,21 @@ func (instance SimpleHttpError) Error() string {
 type HttpHandler func(w http.ResponseWriter, r *http.Request)
 
 const (
-	SimpleHttpServerHandler_NoHandler          int = 405
-	SimpleHttpServerHandler_MethodNotSupported int = 404
+	SimpleHttpServerHandler_NoHandler          int    = 405
+	SimpleHttpServerHandler_MethodNotSupported int    = 404
+	Any                                        string = "*"
 )
 
 type SimpleHttpServerHandler struct {
 	handlers map[string]HttpHandler
 }
 
-func newSimpleHttpServerHandler() *SimpleHttpServerHandler {
-	return &SimpleHttpServerHandler{map[string]HttpHandler{}}
+func newSimpleHttpServerHandler() SimpleHttpServerHandler {
+	return SimpleHttpServerHandler{map[string]HttpHandler{}}
+}
+
+func (instance *SimpleHttpServerHandler) addAnyHandler(handler HttpHandler) {
+	instance.handlers[Any] = handler
 }
 
 func (instance *SimpleHttpServerHandler) addHandler(path string, method string, handler HttpHandler) {
@@ -45,11 +50,13 @@ func (instance *SimpleHttpServerHandler) addHandler(path string, method string, 
 }
 
 func (instance *SimpleHttpServerHandler) handlerFor(path string, method string) (HttpHandler, error) {
+	if handler, ok := instance.handlers[Any]; ok {
+		return handler, nil
+	}
 	lowerPath := strings.ToLower(path)
 	lowerMethod := strings.ToLower(method)
 	key := lowerPath + "_" + lowerMethod
 	if handler, ok := instance.handlers[key]; !ok {
-		fmt.Println("Cannot find a handler for the path", instance.handlers)
 		return nil, SimpleHttpError{http.StatusNotFound}
 	} else {
 		return handler, nil
@@ -86,7 +93,7 @@ func NewSimpleHttpServer(port int, host string) *SimpleHttpServer {
 	}
 	handler := newSimpleHttpServerHandler()
 	mux := http.NewServeMux()
-	mux.Handle("/", handler)
+	mux.Handle("/", &handler)
 	server := &http.Server{
 		Addr:           fmt.Sprintf("%s:%d", host, port),
 		Handler:        mux,
@@ -94,7 +101,7 @@ func NewSimpleHttpServer(port int, host string) *SimpleHttpServer {
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-	return &SimpleHttpServer{ln, handler, gopubsubio.NewPublisher(), mux, server}
+	return &SimpleHttpServer{ln, &handler, gopubsubio.NewPublisher(), mux, server}
 }
 
 func (instance *SimpleHttpServer) Start() {
@@ -117,6 +124,16 @@ func (instance *SimpleHttpServer) OnStopped(delegate func()) {
 	instance.publisher.Subscribe(STOPPED_EVENT_KEY, subscriber)
 }
 
+func createHandlerFor(method string, handler HttpHandler) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if strings.ToLower(r.Method) == strings.ToLower(method) {
+			handler(w, r)
+		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	}
+}
+
 func (instance *SimpleHttpServer) Get(path string, handler HttpHandler) {
 	instance.handler.addHandler(path, "get", handler)
 }
@@ -131,6 +148,10 @@ func (instance *SimpleHttpServer) Put(path string, handler HttpHandler) {
 
 func (instance *SimpleHttpServer) Delete(path string, handler HttpHandler) {
 	instance.handler.addHandler(path, "delete", handler)
+}
+
+func (instance *SimpleHttpServer) Any(handler HttpHandler) {
+	instance.handler.addAnyHandler(handler)
 }
 
 func (instance *SimpleHttpServer) Stop() {
