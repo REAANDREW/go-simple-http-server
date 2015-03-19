@@ -83,14 +83,11 @@ type SimpleHttpServer struct {
 	publisher gopubsubio.Publisher
 	mux       *http.ServeMux
 	server    *http.Server
+	port      int
+	host      string
 }
 
 func NewSimpleHttpServer(port int, host string) *SimpleHttpServer {
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
-	if err != nil {
-		fmt.Printf("error %v\n", err)
-		panic(errors.New("A listener cannot be setup"))
-	}
 	handler := newSimpleHttpServerHandler()
 	mux := http.NewServeMux()
 	mux.Handle("/", &handler)
@@ -101,12 +98,18 @@ func NewSimpleHttpServer(port int, host string) *SimpleHttpServer {
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-	return &SimpleHttpServer{ln, &handler, gopubsubio.NewPublisher(), mux, server}
+	return &SimpleHttpServer{nil, &handler, gopubsubio.NewPublisher(), mux, server, port, host}
 }
 
 func (instance *SimpleHttpServer) Start() {
 	go func() {
-		err := instance.server.Serve(instance.listener)
+		var err error
+		instance.listener, err = net.Listen("tcp", fmt.Sprintf("%s:%d", instance.host, instance.port))
+		if err != nil {
+			fmt.Printf("error %v\n", err)
+			panic(errors.New("A listener cannot be setup"))
+		}
+		err = instance.server.Serve(instance.listener)
 		if err != nil {
 			fmt.Errorf("Error encountered here starting the http server: %v")
 		}
