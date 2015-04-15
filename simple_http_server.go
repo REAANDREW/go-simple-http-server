@@ -12,6 +12,7 @@ import (
 
 const (
 	STOPPED_EVENT_KEY string = "stopped"
+	STARTED_EVENT_KEY string = "started"
 )
 
 type SimpleHttpError struct {
@@ -109,6 +110,7 @@ func (instance *SimpleHttpServer) Start() {
 			fmt.Printf("error %v\n", err)
 			panic(errors.New("A listener cannot be setup"))
 		}
+		instance.publishOnStarted()
 		err = instance.server.Serve(instance.listener)
 		if err != nil {
 			fmt.Errorf("Error encountered here starting the http server: %v")
@@ -125,6 +127,17 @@ func (instance *SimpleHttpServer) OnStopped(delegate func()) {
 		delegate()
 	})
 	instance.publisher.Subscribe(STOPPED_EVENT_KEY, subscriber)
+}
+
+func (instance *SimpleHttpServer) publishOnStarted() {
+	instance.publisher.Publish(STARTED_EVENT_KEY, nil)
+}
+
+func (instance *SimpleHttpServer) OnStarted(delegate func()) {
+	subscriber := gopubsubio.NewSubscriber(func(message interface{}) {
+		delegate()
+	})
+	instance.publisher.Subscribe(STARTED_EVENT_KEY, subscriber)
 }
 
 func createHandlerFor(method string, handler HttpHandler) func(w http.ResponseWriter, r *http.Request) {
