@@ -171,6 +171,8 @@ func (instance *SimpleHttpServer) Any(handler HttpHandler) {
 }
 
 func (instance *SimpleHttpServer) Stop() {
-	instance.listener.Close()
+	if instance.listener != nil{
+		instance.listener.Close()
+	}
 	instance.publishOnStopped()
 }
